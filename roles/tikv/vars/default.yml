@@ -226,7 +226,7 @@ rocksdb:
   # writable-file-max-buffer-size: "1MB"
 
   # Use O_DIRECT for both reads and writes in background flush and compactions
-  # use-direct-io-for-flush-and-compaction: false
+  use-direct-io-for-flush-and-compaction: {% if use_direct_io %}true{% else %}false{% endif %}
 
   # Limit the disk IO of compaction and flush. Compaction and flush can cause
   # terrible spikes if they exceed a certain threshold. Consider setting this to

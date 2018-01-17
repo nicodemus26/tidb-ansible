@@ -3,7 +3,7 @@
   copy: src="{{ resources_dir }}/bin/fio" dest="{{ deploy_dir }}/fio" mode=0755
 
 - name: Benchmark randread iops of deploy_dir disk with fio command
-  shell: "cd {{ deploy_dir }} && LANG='en_US.UTF-8' ./fio -ioengine=libaio -bs=32k -direct=1 -thread -rw=randread  -size={{ benchmark_size }} -filename=fio_randread_test.txt -name='PingCAP' -iodepth=4 -runtime=60 | awk -F, '/iops/{print $3}' | awk -F'=' '{print $2}'"
+  shell: "cd {{ deploy_dir }} && LANG='en_US.UTF-8' ./fio -ioengine=libaio -bs=32k {% if use_direct_io %}-direct=1{% endif %} -thread -rw=randread  -size={{ benchmark_size }} -filename=fio_randread_test.txt -name='PingCAP' -iodepth=4 -runtime=60 | awk -F, '/iops/{print $3}' | awk -F'=' '{print $2}'"
   register: disk_randread_iops
 
 - name: Clean fio randread iops benchmark temporary file
@@ -18,7 +18,7 @@
   when: disk_randread_iops.stdout|int < min_ssd_randread_iops|int
 
 - name: Benchmark mixed randread and sequential write iops of deploy_dir disk with fio command
-  shell: "cd {{ deploy_dir }} && LANG='en_US.UTF-8' ./fio -ioengine=libaio -bs=32k -direct=1 -thread -rw=randrw -percentage_random=100,0 -size={{ benchmark_size }} -filename=fio_randr_write_test.txt -name='PingCAP' -iodepth=4 -runtime=60 | grep iops | egrep 'read|write' | awk -F, '/iops/{print $3}' | awk -F= '{print $2}'"
+  shell: "cd {{ deploy_dir }} && LANG='en_US.UTF-8' ./fio -ioengine=libaio -bs=32k {% if use_direct_io %}-direct=1{% endif %} -thread -rw=randrw -percentage_random=100,0 -size={{ benchmark_size }} -filename=fio_randr_write_test.txt -name='PingCAP' -iodepth=4 -runtime=60 | grep iops | egrep 'read|write' | awk -F, '/iops/{print $3}' | awk -F= '{print $2}'"
   register: disk_randr_write_iops
 
 - name: set fio disk_mix_randread_iops facts
@@ -46,7 +46,7 @@
   when: disk_mix_write_iops|int < min_ssd_mix_write_iops|int
 
 - name: Benchmark mixed randread and sequential write latency of deploy_dir disk with fio command
-  shell: "cd {{ deploy_dir }} && LANG='en_US.UTF-8' ./fio -ioengine=libaio -bs=32k -direct=1 -thread -rw=randrw -percentage_random=100,0 -size={{ benchmark_size }} -filename=fio_randr_write_lat_test.txt -name='PingCAP' -iodepth=4 -runtime=60 | grep -w 'lat (usec)' | grep avg | awk -F'avg=' '{print $2}' | awk -F',' '{print $1}'"
+  shell: "cd {{ deploy_dir }} && LANG='en_US.UTF-8' ./fio -ioengine=libaio -bs=32k {% if use_direct_io %}-direct=1{% endif %} -thread -rw=randrw -percentage_random=100,0 -size={{ benchmark_size }} -filename=fio_randr_write_lat_test.txt -name='PingCAP' -iodepth=4 -runtime=60 | grep -w 'lat (usec)' | grep avg | awk -F'avg=' '{print $2}' | awk -F',' '{print $1}'"
   register: disk_randr_write_lat
 
 - name: set fio disk_mix_randread_lat facts
@@ -74,7 +74,7 @@
   when: disk_mix_write_lat|int > max_ssd_mix_write_lat|int
 
 - name: Benchmark the direct write speed of deploy_dir disk with dd command
-  shell: "LANG='en_US.UTF-8' LC_NUMERIC='en_US.UTF-8' dd bs=4k count=250000 oflag=direct if=/dev/zero of={{ deploy_dir }}/dd_test.txt 2>&1 | awk '/MB/{print $(NF-1)}'"
+  shell: "LANG='en_US.UTF-8' LC_NUMERIC='en_US.UTF-8' dd bs=4k count=250000 {% if use_direct_io %}oflag=direct{% endif %} if=/dev/zero of={{ deploy_dir }}/dd_test.txt 2>&1 | awk '/MB/{print $(NF-1)}'"
   register: disk_write_speed
 
 - name: Clean dd benchmark temporary file
